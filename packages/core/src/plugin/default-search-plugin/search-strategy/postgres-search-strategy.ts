@@ -95,6 +95,7 @@ export class PostgresSearchStrategy implements SearchStrategy {
                 .addSelect('MIN(si.priceWithTax)', 'minPriceWithTax')
                 .addSelect('MAX(si.priceWithTax)', 'maxPriceWithTax');
         }
+
         this.applyTermAndFilters(ctx, qb, input);
 
         if (sort) {
@@ -104,13 +105,14 @@ export class PostgresSearchStrategy implements SearchStrategy {
             if (sort.price) {
                 qb.addOrderBy('"si_price"', sort.price);
             }
-        } else {
-            if (input.term && input.term.length > this.minTermLength) {
-                qb.addOrderBy('score', 'DESC');
-            } else {
-                qb.addOrderBy('"si_productVariantId"', 'ASC');
-            }
+        } else if (input.term && input.term.length > this.minTermLength) {
+            qb.addOrderBy('score', 'DESC');
         }
+
+        // Required to ensure deterministic sorting.
+        // E.g. in case of sorting products with duplicate name, price or score results.
+        qb.addOrderBy('"si_productVariantId"', 'ASC');
+
         if (enabledOnly) {
             qb.andWhere('"si"."enabled" = :enabled', { enabled: true });
         }
@@ -196,7 +198,7 @@ export class PostgresSearchStrategy implements SearchStrategy {
                 new Brackets(qb1 => {
                     for (const id of facetValueIds) {
                         const placeholder = createPlaceholderFromId(id);
-                        const clause = `:${placeholder} = ANY (string_to_array(si.facetValueIds, ','))`;
+                        const clause = `:${placeholder}::varchar = ANY (string_to_array(si.facetValueIds, ','))`;
                         const params = { [placeholder]: id };
                         if (facetValueOperator === LogicalOperator.AND) {
                             qb1.andWhere(clause, params);
@@ -218,14 +220,14 @@ export class PostgresSearchStrategy implements SearchStrategy {
                                 }
                                 if (facetValueFilter.and) {
                                     const placeholder = createPlaceholderFromId(facetValueFilter.and);
-                                    const clause = `:${placeholder} = ANY (string_to_array(si.facetValueIds, ','))`;
+                                    const clause = `:${placeholder}::varchar = ANY (string_to_array(si.facetValueIds, ','))`;
                                     const params = { [placeholder]: facetValueFilter.and };
                                     qb2.where(clause, params);
                                 }
                                 if (facetValueFilter.or?.length) {
                                     for (const id of facetValueFilter.or) {
                                         const placeholder = createPlaceholderFromId(id);
-                                        const clause = `:${placeholder} = ANY (string_to_array(si.facetValueIds, ','))`;
+                                        const clause = `:${placeholder}::varchar = ANY (string_to_array(si.facetValueIds, ','))`;
                                         const params = { [placeholder]: id };
                                         qb2.orWhere(clause, params);
                                     }
@@ -237,19 +239,23 @@ export class PostgresSearchStrategy implements SearchStrategy {
             );
         }
         if (collectionId) {
-            qb.andWhere(":collectionId = ANY (string_to_array(si.collectionIds, ','))", { collectionId });
+            qb.andWhere(":collectionId::varchar = ANY (string_to_array(si.collectionIds, ','))", {
+                collectionId,
+            });
         }
         if (collectionSlug) {
-            qb.andWhere(":collectionSlug = ANY (string_to_array(si.collectionSlugs, ','))", {
+            qb.andWhere(":collectionSlug::varchar = ANY (string_to_array(si.collectionSlugs, ','))", {
                 collectionSlug,
             });
         }
 
-        applyLanguageConstraints(qb, ctx.languageCode, ctx.channel.defaultLanguageCode);
         qb.andWhere('si.channelId = :channelId', { channelId: ctx.channelId });
+        applyLanguageConstraints(qb, ctx.languageCode, ctx.channel.defaultLanguageCode);
+
         if (input.groupByProduct === true) {
             qb.groupBy('si.productId');
         }
+
         return qb;
     }
 

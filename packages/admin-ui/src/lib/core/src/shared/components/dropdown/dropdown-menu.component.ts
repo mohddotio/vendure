@@ -1,18 +1,10 @@
-import {
-    ConnectedPosition,
-    HorizontalConnectionPos,
-    Overlay,
-    OverlayRef,
-    PositionStrategy,
-    VerticalConnectionPos,
-} from '@angular/cdk/overlay';
+import { ConnectedPosition, Overlay, OverlayRef, PositionStrategy } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import {
     AfterViewInit,
     ChangeDetectionStrategy,
     Component,
-    ContentChild,
-    ElementRef,
+    HostListener,
     Input,
     OnDestroy,
     OnInit,
@@ -22,7 +14,10 @@ import {
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 
-import { DropdownTriggerDirective } from './dropdown-trigger.directive';
+import {
+    LocalizationDirectionType,
+    LocalizationService,
+} from '../../../providers/localization/localization.service';
 import { DropdownComponent } from './dropdown.component';
 
 export type DropdownPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
@@ -40,10 +35,16 @@ export type DropdownPosition = 'top-left' | 'top-right' | 'bottom-left' | 'botto
     selector: 'vdr-dropdown-menu',
     template: `
         <ng-template #menu>
-            <div class="dropdown open">
-                <div class="dropdown-menu" [ngClass]="customClasses">
-                    <div class="dropdown-content-wrapper">
-                        <ng-content></ng-content>
+            <div [dir]="direction$ | async">
+                <div class="dropdown open">
+                    <div class="dropdown-menu" [ngClass]="customClasses">
+                        <div
+                            class="dropdown-content-wrapper"
+                            [cdkTrapFocus]="true"
+                            [cdkTrapFocusAutoCapture]="true"
+                        >
+                            <ng-content></ng-content>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -53,20 +54,60 @@ export type DropdownPosition = 'top-left' | 'top-right' | 'bottom-left' | 'botto
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DropdownMenuComponent implements AfterViewInit, OnInit, OnDestroy {
+    direction$: LocalizationDirectionType;
+
     @Input('vdrPosition') private position: DropdownPosition = 'bottom-left';
     @Input() customClasses: string;
     @ViewChild('menu', { static: true }) private menuTemplate: TemplateRef<any>;
-    private menuPortal: TemplatePortal<any>;
+    private menuPortal: TemplatePortal;
     private overlayRef: OverlayRef;
     private backdropClickSub: Subscription;
+
+    @HostListener('window:keydown.escape', ['$event'])
+    onEscapeKeydown(event: KeyboardEvent) {
+        if (this.dropdown.isOpen) {
+            if (this.overlayRef.overlayElement.contains(document.activeElement)) {
+                this.dropdown.toggleOpen();
+            }
+        }
+    }
+
+    @HostListener('window:keydown', ['$event'])
+    onArrowKey(event: KeyboardEvent) {
+        if (
+            this.dropdown.isOpen &&
+            document.activeElement instanceof HTMLElement &&
+            (event.key === 'ArrowDown' || event.key === 'ArrowUp')
+        ) {
+            const dropdownItems = Array.from(
+                this.overlayRef.overlayElement.querySelectorAll<HTMLElement>('.dropdown-item'),
+            );
+            const currentIndex = dropdownItems.indexOf(document.activeElement);
+            if (currentIndex === -1) {
+                return;
+            }
+            if (event.key === 'ArrowDown') {
+                const nextItem = dropdownItems[(currentIndex + 1) % dropdownItems.length];
+                nextItem.focus();
+            }
+            if (event.key === 'ArrowUp') {
+                const previousItem =
+                    dropdownItems[(currentIndex - 1 + dropdownItems.length) % dropdownItems.length];
+                previousItem.focus();
+            }
+        }
+    }
 
     constructor(
         private overlay: Overlay,
         private viewContainerRef: ViewContainerRef,
         private dropdown: DropdownComponent,
+        private localizationService: LocalizationService,
     ) {}
 
     ngOnInit(): void {
+        this.direction$ = this.localizationService.direction$;
+
         this.dropdown.onOpenChange(isOpen => {
             if (isOpen) {
                 this.overlayRef.attach(this.menuPortal);

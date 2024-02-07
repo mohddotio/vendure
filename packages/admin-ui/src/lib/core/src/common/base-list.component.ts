@@ -1,4 +1,4 @@
-import { Directive, inject, OnDestroy, OnInit } from '@angular/core';
+import { DestroyRef, Directive, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { ActivatedRoute, QueryParamsHandling, Router } from '@angular/router';
 import { ResultOf, TypedDocumentNode, VariablesOf } from '@graphql-typed-document-node/core';
@@ -125,6 +125,7 @@ export class BaseListComponent<ResultType, ItemType, VariableType extends Record
         const searchTerm$ = this.searchTermControl.valueChanges.pipe(
             filter(value => value !== null && (2 < value.length || value.length === 0)),
             debounceTime(250),
+            tap(() => this.setPageNumber(1)),
         );
 
         merge(searchTerm$, ...streams)
@@ -211,8 +212,14 @@ export class TypedBaseListComponent<
     protected router = inject(Router);
     protected serverConfigService = inject(ServerConfigService);
     private refreshStreams: Array<Observable<any>> = [];
+    private collections: Array<DataTableFilterCollection | DataTableSortCollection<any>> = [];
     constructor() {
         super(inject(Router), inject(ActivatedRoute));
+
+        const destroyRef = inject(DestroyRef);
+        destroyRef.onDestroy(() => {
+            this.collections.forEach(c => c.destroy());
+        });
     }
 
     protected configure(config: {
@@ -240,11 +247,15 @@ export class TypedBaseListComponent<
     }
 
     createFilterCollection(): DataTableFilterCollection<NonNullable<NonNullable<Vars['options']>['filter']>> {
-        return new DataTableFilterCollection<NonNullable<Vars['options']['filter']>>(this.router);
+        const collection = new DataTableFilterCollection<NonNullable<Vars['options']['filter']>>(this.router);
+        this.collections.push(collection);
+        return collection;
     }
 
     createSortCollection(): DataTableSortCollection<NonNullable<NonNullable<Vars['options']>['sort']>> {
-        return new DataTableSortCollection<NonNullable<Vars['options']['sort']>>(this.router);
+        const collection = new DataTableSortCollection<NonNullable<Vars['options']['sort']>>(this.router);
+        this.collections.push(collection);
+        return collection;
     }
 
     setLanguage(code: LanguageCode) {

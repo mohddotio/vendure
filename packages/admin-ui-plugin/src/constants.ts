@@ -7,6 +7,8 @@ export const defaultLanguage = LanguageCode.en;
 export const defaultLocale = undefined;
 
 export const defaultAvailableLanguages = [
+    LanguageCode.he,
+    LanguageCode.ar,
     LanguageCode.de,
     LanguageCode.en,
     LanguageCode.es,
@@ -20,4 +22,7 @@ export const defaultAvailableLanguages = [
     LanguageCode.ru,
     LanguageCode.uk,
     LanguageCode.it,
+    LanguageCode.fa,
+    LanguageCode.ne,
+    LanguageCode.hr,
 ];

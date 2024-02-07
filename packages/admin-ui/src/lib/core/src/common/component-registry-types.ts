@@ -1,4 +1,5 @@
-import { UntypedFormControl } from '@angular/forms';
+import { FormControl } from '@angular/forms';
+import { DataTableLocationId } from '../shared/components/data-table-2/data-table-custom-component.service';
 
 /**
  * @description
@@ -30,7 +31,7 @@ export interface FormInputComponent<C = InputComponentConfig> {
      *
      * Full documentation can be found in the [Angular docs](https://angular.io/api/forms/FormControl).
      */
-    formControl: UntypedFormControl;
+    formControl: FormControl;
     /**
      * @description
      * The `config` property contains the full configuration object of the custom field or configurable argument.
@@ -116,6 +117,7 @@ export type CustomDetailComponentLocationId =
     | 'country-detail'
     | 'customer-detail'
     | 'customer-group-detail'
+    | 'draft-order-detail'
     | 'facet-detail'
     | 'global-settings-detail'
     | 'order-detail'
@@ -130,4 +132,7 @@ export type CustomDetailComponentLocationId =
     | 'tax-rate-detail'
     | 'zone-detail';
 
-export type UIExtensionLocationId = ActionBarLocationId | CustomDetailComponentLocationId;
+export type UIExtensionLocationId =
+    | ActionBarLocationId
+    | CustomDetailComponentLocationId
+    | DataTableLocationId;

@@ -8,6 +8,7 @@ import {
     GetCustomerGroupDetailDocument,
     PageService,
     SharedModule,
+    SortOrder,
 } from '@vendure/admin-ui/core';
 
 import { AddCustomerToGroupDialogComponent } from './components/add-customer-to-group-dialog/add-customer-to-group-dialog.component';
@@ -56,10 +57,12 @@ import { CustomerGroupDetailComponent } from './components/customer-group-detail
     exports: [AddressCardComponent],
 })
 export class CustomerModule {
-    constructor(
-        private bulkActionRegistryService: BulkActionRegistryService,
-        private pageService: PageService,
-    ) {
+    private static hasRegisteredTabsAndBulkActions = false;
+
+    constructor(bulkActionRegistryService: BulkActionRegistryService, pageService: PageService) {
+        if (CustomerModule.hasRegisteredTabsAndBulkActions) {
+            return;
+        }
         bulkActionRegistryService.registerBulkAction(deleteCustomersBulkAction);
         bulkActionRegistryService.registerBulkAction(deleteCustomerGroupsBulkAction);
         bulkActionRegistryService.registerBulkAction(removeCustomerGroupMembersBulkAction);
@@ -80,6 +83,13 @@ export class CustomerModule {
                 component: CustomerDetailComponent,
                 query: CustomerDetailQueryDocument,
                 entityKey: 'customer',
+                variables: {
+                    orderListOptions: {
+                        sort: {
+                            orderPlacedAt: SortOrder.DESC,
+                        },
+                    },
+                },
                 getBreadcrumbs: entity => [
                     {
                         label: entity
@@ -114,5 +124,6 @@ export class CustomerModule {
                 ],
             }),
         });
+        CustomerModule.hasRegisteredTabsAndBulkActions = true;
     }
 }

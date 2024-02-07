@@ -61,7 +61,7 @@ class TestEmailPlugin implements OnModuleInit {
 
     onModuleInit() {
         this.eventBus.ofType(AccountRegistrationEvent).subscribe(event => {
-            sendEmailFn(event);
+            sendEmailFn?.(event);
         });
     }
 }
@@ -505,7 +505,7 @@ describe('Customer resolver', () => {
             customerErrorGuard.assertSuccess(createCustomer);
 
             expect(createCustomer.user!.verified).toBe(true);
-            expect(sendEmailFn).toHaveBeenCalledTimes(0);
+            expect(sendEmailFn).toHaveBeenCalledTimes(1);
         });
 
         it('return error result when using an existing, non-deleted emailAddress', async () => {
@@ -524,6 +524,22 @@ describe('Customer resolver', () => {
 
             expect(createCustomer.message).toBe('The email address is not available.');
             expect(createCustomer.errorCode).toBe(ErrorCode.EMAIL_ADDRESS_CONFLICT_ERROR);
+        });
+
+        it('normalizes email address on creation', async () => {
+            const { createCustomer } = await adminClient.query<
+                Codegen.CreateCustomerMutation,
+                Codegen.CreateCustomerMutationVariables
+            >(CREATE_CUSTOMER, {
+                input: {
+                    emailAddress: ' JoeSmith@test.com ',
+                    firstName: 'Joe',
+                    lastName: 'Smith',
+                },
+                password: 'test',
+            });
+            customerErrorGuard.assertSuccess(createCustomer);
+            expect(createCustomer.emailAddress).toBe('joesmith@test.com');
         });
     });
 
@@ -565,6 +581,27 @@ describe('Customer resolver', () => {
             const { me } = await shopClient.query<Codegen.MeQuery>(ME);
 
             expect(me?.identifier).toBe('unique-email@test.com');
+        });
+
+        // https://github.com/vendure-ecommerce/vendure/issues/2449
+        it('normalizes email address on update', async () => {
+            const { updateCustomer } = await adminClient.query<
+                Codegen.UpdateCustomerMutation,
+                Codegen.UpdateCustomerMutationVariables
+            >(UPDATE_CUSTOMER, {
+                input: {
+                    id: thirdCustomer.id,
+                    emailAddress: ' Another-Address@test.com ',
+                },
+            });
+            customerErrorGuard.assertSuccess(updateCustomer);
+
+            expect(updateCustomer.emailAddress).toBe('another-address@test.com');
+
+            await shopClient.asUserWithCredentials('another-address@test.com', 'test');
+            const { me } = await shopClient.query<Codegen.MeQuery>(ME);
+
+            expect(me?.identifier).toBe('another-address@test.com');
         });
     });
 
@@ -611,7 +648,7 @@ describe('Customer resolver', () => {
                             firstName: 'updated',
                         },
                     }),
-                "No Customer with the id '3' could be found",
+                'No Customer with the id "3" could be found',
             ),
         );
 
@@ -629,7 +666,7 @@ describe('Customer resolver', () => {
                             },
                         },
                     ),
-                "No Customer with the id '3' could be found",
+                'No Customer with the id "3" could be found',
             ),
         );
 

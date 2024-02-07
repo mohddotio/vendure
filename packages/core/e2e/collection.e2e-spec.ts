@@ -13,7 +13,7 @@ import path from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { initialData } from '../../../e2e-common/e2e-initial-data';
-import { testConfig, TEST_SETUP_TIMEOUT_MS } from '../../../e2e-common/test-config';
+import { TEST_SETUP_TIMEOUT_MS, testConfig } from '../../../e2e-common/test-config';
 import { pick } from '../../common/lib/pick';
 
 import { COLLECTION_FRAGMENT, FACET_VALUE_FRAGMENT } from './graphql/fragments';
@@ -28,6 +28,7 @@ import {
     SortOrder,
 } from './graphql/generated-e2e-admin-types';
 import {
+    ASSIGN_COLLECTIONS_TO_CHANNEL,
     CREATE_CHANNEL,
     CREATE_COLLECTION,
     DELETE_PRODUCT,
@@ -1020,7 +1021,7 @@ describe('Collection resolver', () => {
                 >(DELETE_COLLECTION, {
                     id: 'T_999',
                 });
-            }, 'No Collection with the id \'999\' could be found'),
+            }, 'No Collection with the id "999" could be found'),
         );
 
         it('collection and product related prior to deletion', async () => {
@@ -2577,15 +2578,6 @@ const PREVIEW_COLLECTION_VARIANTS = gql`
             totalItems
         }
     }
-`;
-
-const ASSIGN_COLLECTIONS_TO_CHANNEL = gql`
-    mutation AssignCollectionsToChannel($input: AssignCollectionsToChannelInput!) {
-        assignCollectionsToChannel(input: $input) {
-            ...Collection
-        }
-    }
-    ${COLLECTION_FRAGMENT}
 `;
 
 const REMOVE_COLLECTIONS_FROM_CHANNEL = gql`

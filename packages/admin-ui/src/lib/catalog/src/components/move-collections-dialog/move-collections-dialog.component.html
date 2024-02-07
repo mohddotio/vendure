@@ -16,19 +16,19 @@
         [searchTermControl]="searchTermControl"
         [searchTermPlaceholder]="'common.search-by-name' | translate"
     ></vdr-dt2-search>
-    <vdr-dt2-column [heading]="'common.id' | translate" [hiddenByDefault]="true">
+    <vdr-dt2-column [heading]="'common.id' | translate" id="id" [hiddenByDefault]="true">
         <ng-template let-collection="item">
             {{ collection.id }}
         </ng-template>
     </vdr-dt2-column>
-    <vdr-dt2-column [heading]="'common.name' | translate" [optional]="false">
+    <vdr-dt2-column [heading]="'common.name' | translate" id="name" [optional]="false">
         <ng-template let-collection="item" let-depth="depth">
             <div [ngClass]="'indent-' + depth"></div>
             <clr-icon
                 class="child-arrow"
                 [class.transparent]="depth === 0"
                 shape="child-arrow"
-                *ngIf="!collection.children?.length"
+                *ngIf="!collection.children?.length && collection.parentId !== '__'"
             ></clr-icon>
             <button
                 class="icon-button folder-button"
@@ -38,12 +38,15 @@
                 <clr-icon shape="folder" *ngIf="!expandedIds.includes(collection.id)"></clr-icon>
                 <clr-icon shape="folder-open" *ngIf="expandedIds.includes(collection.id)"></clr-icon>
             </button>
+            <button class="icon-button folder-button" *ngIf="collection.parentId === '__'" disabled>
+                <clr-icon shape="folder" class="is-solid"></clr-icon>
+            </button>
             <button class="button-ghost" (click)="resolveWith(collection)">
-                <span>{{ 'catalog.move-collection-to' | translate : { name: collection.name } }}</span>
+                <span>{{ 'catalog.move-collection-to' | translate : {name: collection.name} }}</span>
             </button>
         </ng-template>
     </vdr-dt2-column>
-    <vdr-dt2-column [heading]="'common.breadcrumb' | translate">
+    <vdr-dt2-column [heading]="'common.breadcrumb' | translate" id="breadcrumb">
         <ng-template let-collection="item">
             <div class="breadcrumb">
                 <ng-container *ngIf="collection | collectionBreadcrumb as breadcrumbs">
@@ -57,7 +60,7 @@
             </div>
         </ng-template>
     </vdr-dt2-column>
-    <vdr-dt2-column [heading]="'common.slug' | translate">
+    <vdr-dt2-column [heading]="'common.slug' | translate" id="slug">
         <ng-template let-collection="item">
             {{ collection.slug }}
         </ng-template>

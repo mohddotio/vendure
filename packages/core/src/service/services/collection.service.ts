@@ -15,6 +15,7 @@ import {
 import { pick } from '@vendure/common/lib/pick';
 import { ROOT_COLLECTION_NAME } from '@vendure/common/lib/shared-constants';
 import { ID, PaginatedList } from '@vendure/common/lib/shared-types';
+import { unique } from '@vendure/common/lib/unique';
 import { merge } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { In, IsNull } from 'typeorm';
@@ -48,7 +49,6 @@ import { moveToIndex } from '../helpers/utils/move-to-index';
 
 import { AssetService } from './asset.service';
 import { ChannelService } from './channel.service';
-import { FacetValueService } from './facet-value.service';
 import { RoleService } from './role.service';
 
 export type ApplyCollectionFiltersJobData = {
@@ -72,7 +72,6 @@ export class CollectionService implements OnModuleInit {
         private connection: TransactionalConnection,
         private channelService: ChannelService,
         private assetService: AssetService,
-        private facetValueService: FacetValueService,
         private listQueryBuilder: ListQueryBuilder,
         private translatableSaver: TranslatableSaver,
         private eventBus: EventBus,
@@ -142,9 +141,11 @@ export class CollectionService implements OnModuleInit {
                             continue;
                         }
                         job.setProgress(Math.ceil((completed / job.data.collectionIds.length) * 100));
-                        this.eventBus.publish(
-                            new CollectionModificationEvent(ctx, collection, affectedVariantIds),
-                        );
+                        if (affectedVariantIds.length) {
+                            this.eventBus.publish(
+                                new CollectionModificationEvent(ctx, collection, affectedVariantIds),
+                            );
+                        }
                     }
                 }
             },
@@ -222,7 +223,14 @@ export class CollectionService implements OnModuleInit {
     ): Promise<Translated<Collection> | undefined> {
         const translations = await this.connection.getRepository(ctx, CollectionTranslation).find({
             relations: ['base'],
-            where: { slug },
+            where: {
+                slug,
+                base: {
+                    channels: {
+                        id: ctx.channelId,
+                    },
+                },
+            },
         });
 
         if (!translations?.length) {
@@ -798,13 +806,18 @@ export class CollectionService implements OnModuleInit {
         }
         const collectionsToAssign = await this.connection
             .getRepository(ctx, Collection)
-            .find({ where: { id: In(input.collectionIds) } });
+            .find({ where: { id: In(input.collectionIds) }, relations: { assets: true } });
 
         await Promise.all(
             collectionsToAssign.map(collection =>
                 this.channelService.assignToChannels(ctx, Collection, collection.id, [input.channelId]),
             ),
         );
+
+        const assetIds: ID[] = unique(
+            ([] as ID[]).concat(...collectionsToAssign.map(c => c.assets.map(a => a.assetId))),
+        );
+        await this.assetService.assignToChannel(ctx, { channelId: input.channelId, assetIds });
 
         await this.applyFiltersQueue.add({
             ctx: ctx.serialize(),

@@ -136,7 +136,7 @@ export interface DefaultOrderProcessOptions {
  * Used to configure a customized instance of the default {@link OrderProcess} that ships with Vendure.
  * Using this function allows you to turn off certain checks and constraints that are enabled by default.
  *
- * ```TypeScript
+ * ```ts
  * import { configureDefaultOrderProcess, VendureConfig } from '\@vendure/core';
  *
  * const myCustomOrderProcess = configureDefaultOrderProcess({
@@ -413,10 +413,13 @@ export function configureDefaultOrderProcess(options: DefaultOrderProcessOptions
                     order.active = false;
                     order.orderPlacedAt = new Date();
                     await Promise.all(
-                        order.lines.map(line =>
+                        order.lines.map(line => {
+                            line.orderPlacedQuantity = line.quantity
                             connection
                                 .getRepository(ctx, OrderLine)
-                                .update(line.id, { orderPlacedQuantity: line.quantity }),
+                                .update(line.id, { orderPlacedQuantity: line.quantity })
+                            return line
+                        }
                         ),
                     );
                     eventBus.publish(new OrderPlacedEvent(fromState, toState, ctx, order));
@@ -434,6 +437,11 @@ export function configureDefaultOrderProcess(options: DefaultOrderProcessOptions
             }
             if (toState === 'Cancelled') {
                 order.active = false;
+            }
+            if (fromState === 'Draft' && toState === 'ArrangingPayment') {
+                // Once we exit the Draft state, we can consider the order active,
+                // which will allow us to run the OrderPlacedStrategy at the correct point.
+                order.active = true;
             }
             await historyService.createHistoryEntryForOrder({
                 orderId: order.id,

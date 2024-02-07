@@ -291,9 +291,16 @@ export class ProductVariantService {
      * page, this method returns only the Product itself.
      */
     async getProductForVariant(ctx: RequestContext, variant: ProductVariant): Promise<Translated<Product>> {
-        const product = await this.connection.getEntityOrThrow(ctx, Product, variant.productId, {
-            includeSoftDeleted: true,
-        });
+        let product;
+
+        if (!variant.product) {
+            product = await this.connection.getEntityOrThrow(ctx, Product, variant.productId, {
+                includeSoftDeleted: true,
+            });
+        } else {
+            product = variant.product;
+        }
+
         return this.translator.translate(product, ctx);
     }
 
@@ -443,9 +450,9 @@ export class ProductVariantService {
             );
         }
 
-        const defaultChannelId = (await this.channelService.getDefaultChannel(ctx)).id;
+        const defaultChannel = await this.channelService.getDefaultChannel(ctx);
         await this.createOrUpdateProductVariantPrice(ctx, createdVariant.id, input.price, ctx.channelId);
-        if (!idsAreEqual(ctx.channelId, defaultChannelId)) {
+        if (!idsAreEqual(ctx.channelId, defaultChannel.id)) {
             // When creating a ProductVariant _not_ in the default Channel, we still need to
             // create a ProductVariantPrice for it in the default Channel, otherwise errors will
             // result when trying to query it there.
@@ -453,7 +460,8 @@ export class ProductVariantService {
                 ctx,
                 createdVariant.id,
                 input.price,
-                defaultChannelId,
+                defaultChannel.id,
+                defaultChannel.defaultCurrencyCode,
             );
         }
         return createdVariant.id;
@@ -711,6 +719,7 @@ export class ProductVariantService {
             relations: ['taxCategory', 'assets'],
         });
         const priceFactor = input.priceFactor != null ? input.priceFactor : 1;
+        const targetChannel = await this.connection.getEntityOrThrow(ctx, Channel, input.channelId);
         for (const variant of variants) {
             if (variant.deletedAt) {
                 continue;
@@ -718,13 +727,13 @@ export class ProductVariantService {
             await this.applyChannelPriceAndTax(variant, ctx);
             await this.channelService.assignToChannels(ctx, Product, variant.productId, [input.channelId]);
             await this.channelService.assignToChannels(ctx, ProductVariant, variant.id, [input.channelId]);
-            const targetChannel = await this.channelService.findOne(ctx, input.channelId);
-            const price = targetChannel?.pricesIncludeTax ? variant.priceWithTax : variant.price;
+            const price = targetChannel.pricesIncludeTax ? variant.priceWithTax : variant.price;
             await this.createOrUpdateProductVariantPrice(
                 ctx,
                 variant.id,
                 roundMoney(price * priceFactor),
                 input.channelId,
+                targetChannel.defaultCurrencyCode,
             );
             const assetIds = variant.assets?.map(a => a.assetId) || [];
             await this.assetService.assignToChannel(ctx, { channelId: input.channelId, assetIds });

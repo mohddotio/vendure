@@ -289,7 +289,7 @@ describe('Role resolver', () => {
                         },
                     },
                 );
-            }, `The role '${SUPER_ADMIN_ROLE_CODE}' cannot be modified`),
+            }, `The role "${SUPER_ADMIN_ROLE_CODE}" cannot be modified`),
         );
 
         it(
@@ -311,7 +311,7 @@ describe('Role resolver', () => {
                         },
                     },
                 );
-            }, `The role '${CUSTOMER_ROLE_CODE}' cannot be modified`),
+            }, `The role "${CUSTOMER_ROLE_CODE}" cannot be modified`),
         );
     });
 
@@ -329,7 +329,7 @@ describe('Role resolver', () => {
                     id: customerRole.id,
                 },
             );
-        }, `The role '${CUSTOMER_ROLE_CODE}' cannot be deleted`),
+        }, `The role "${CUSTOMER_ROLE_CODE}" cannot be deleted`),
     );
 
     it(
@@ -346,7 +346,7 @@ describe('Role resolver', () => {
                     id: superAdminRole.id,
                 },
             );
-        }, `The role '${SUPER_ADMIN_ROLE_CODE}' cannot be deleted`),
+        }, `The role "${SUPER_ADMIN_ROLE_CODE}" cannot be deleted`),
     );
 
     it('deleteRole deletes a role', async () => {
@@ -508,6 +508,24 @@ describe('Role resolver', () => {
 
             adminClient.setChannelToken(secondChannel.token);
             await adminClient.asUserWithCredentials(limitedAdmin.emailAddress, 'test');
+        });
+
+        it('limited admin cannot view Roles which require permissions they do not have', async () => {
+            const result = await adminClient.query<Codegen.GetRolesQuery, Codegen.GetRolesQueryVariables>(
+                GET_ROLES,
+            );
+
+            const roleCodes = result.roles.items.map(r => r.code);
+            expect(roleCodes).toEqual(['second-channel-admin-manager']);
+        });
+
+        it('limited admin cannot view Role which requires permissions they do not have', async () => {
+            const result = await adminClient.query<Codegen.GetRoleQuery, Codegen.GetRoleQueryVariables>(
+                GET_ROLE,
+                { id: orderReaderRole.id },
+            );
+
+            expect(result.role).toBeNull();
         });
 
         it(

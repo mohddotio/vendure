@@ -1,19 +1,15 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { FormBuilder, Validators } from '@angular/forms';
 import { marker as _ } from '@biesbjerg/ngx-translate-extract-marker';
 import {
-    BaseDetailComponent,
     CHANNEL_FRAGMENT,
     ChannelFragment,
     CreateChannelInput,
     CurrencyCode,
-    CustomFieldConfig,
     DataService,
     GetChannelDetailDocument,
+    getCustomFieldsDefaults,
     GetSellersQuery,
-    GetZoneListQuery,
-    ItemOf,
     LanguageCode,
     NotificationService,
     Permission,
@@ -60,9 +56,7 @@ export class ChannelDetailComponent
         defaultLanguageCode: [undefined as LanguageCode | undefined],
         defaultTaxZoneId: ['', Validators.required],
         sellerId: ['', Validators.required],
-        customFields: this.formBuilder.group(
-            this.customFields.reduce((hash, field) => ({ ...hash, [field.name]: '' }), {}),
-        ),
+        customFields: this.formBuilder.group(getCustomFieldsDefaults(this.customFields)),
     });
 
     availableLanguageCodes$: Observable<LanguageCode[]>;
@@ -113,7 +107,6 @@ export class ChannelDetailComponent
             !code ||
             !token ||
             !defaultLanguageCode ||
-            !pricesIncludeTax ||
             !defaultCurrencyCode ||
             !defaultShippingZoneId ||
             !defaultTaxZoneId
@@ -124,7 +117,7 @@ export class ChannelDetailComponent
             code,
             token,
             defaultLanguageCode,
-            pricesIncludeTax,
+            pricesIncludeTax: !!pricesIncludeTax,
             defaultCurrencyCode,
             defaultShippingZoneId,
             defaultTaxZoneId,
@@ -233,6 +226,8 @@ export class ChannelDetailComponent
     }
 
     private generateToken(): string {
-        return Array.from(crypto.getRandomValues(new Uint8Array(10))).map(b => b.toString(16).padStart(2, '0')).join('');
+        return Array.from(crypto.getRandomValues(new Uint8Array(10)))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
     }
 }

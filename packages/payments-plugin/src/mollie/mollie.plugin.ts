@@ -54,7 +54,7 @@ export interface MolliePluginOptions {
  * ## Setup
  *
  * 1. Add the plugin to your VendureConfig `plugins` array:
- *     ```TypeScript
+ *     ```ts
  *     import { MolliePlugin } from '\@vendure/payments-plugin/package/mollie';
  *
  *     // ...
@@ -160,6 +160,7 @@ export interface MolliePluginOptions {
         schema: shopSchema,
         resolvers: [MollieResolver],
     },
+    compatibility: '^2.0.0',
 })
 export class MolliePlugin {
     static options: MolliePluginOptions;

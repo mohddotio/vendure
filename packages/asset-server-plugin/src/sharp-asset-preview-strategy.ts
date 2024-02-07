@@ -79,7 +79,7 @@ interface SharpAssetPreviewConfig {
  * The settings for the outputs will default to Sharp's defaults (https://sharp.pixelplumbing.com/api-output).
  * However, it is possible to pass your own configurations to control the output of each format:
  *
- * ```TypeScript
+ * ```ts
  * AssetServerPlugin.init({
  *   previewStrategy: new SharpAssetPreviewStrategy({
  *     jpegOptions: { quality: 95 },
@@ -118,7 +118,7 @@ export class SharpAssetPreviewStrategy implements AssetPreviewStrategy {
 
         if (assetType === AssetType.IMAGE) {
             try {
-                const image = sharp(data).rotate();
+                const image = sharp(data, { failOn: 'truncated' }).rotate();
                 const metadata = await image.metadata();
                 const width = metadata.width || 0;
                 const height = metadata.height || 0;

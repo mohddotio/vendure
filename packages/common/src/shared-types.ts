@@ -87,14 +87,14 @@ export type ID = string | number;
  * string       | varchar                               | String
  * localeString | varchar                               | String
  * text         | longtext(m), text(p,s)                | String
- * localText    | longtext(m), text(p,s)                | String
+ * localeText    | longtext(m), text(p,s)                | String
  * int          | int                                   | Int
  * float        | double precision                      | Float
  * boolean      | tinyint (m), bool (p), boolean (s)    | Boolean
  * datetime     | datetime (m,s), timestamp (p)         | DateTime
  * relation     | many-to-one / many-to-many relation   | As specified in config
  *
- * Additionally, the CustomFieldType also dictates which [configuration options](/docs/typescript-api/custom-fields/#configuration-options)
+ * Additionally, the CustomFieldType also dictates which [configuration options](/reference/typescript-api/custom-fields/#configuration-options)
  * are available for that custom field.
  *
  * @docsCategory custom-fields
@@ -147,7 +147,6 @@ export type DefaultFormComponentId =
     | 'select-form-input'
     | 'text-form-input'
     | 'textarea-form-input'
-    | 'asset-form-input'
     | 'product-multi-form-input'
     | 'combination-mode-form-input';
 
@@ -177,7 +176,6 @@ type DefaultFormConfigHash = {
     'textarea-form-input': {
         spellcheck?: boolean;
     };
-    'asset-form-input': Record<string, never>;
     'product-multi-form-input': {
         selectionMode?: 'product' | 'variant';
     };
@@ -211,7 +209,7 @@ export type CustomFieldsObject = { [key: string]: any };
  * The values are loaded at run-time by the Admin UI app, and allow core configuration to be
  * managed without the need to re-build the application.
  *
- * @docsCategory core plugins/AdminUiPlugin
+ * @docsCategory common/AdminUi
  */
 export interface AdminUiConfig {
     /**
@@ -251,12 +249,19 @@ export interface AdminUiConfig {
     /**
      * @description
      * The header used when using the 'bearer' auth method. Should match the
-     * setting of the server's `authOptions.authTokenHeaderKey` config
-     * option.
+     * setting of the server's `authOptions.authTokenHeaderKey` config option.
      *
      * @default 'vendure-auth-token'
      */
     authTokenHeaderKey: string;
+    /**
+     * @description
+     * The name of the header which contains the channel token. Should match the
+     * setting of the server's `apiOptions.channelTokenKey` config option.
+     *
+     * @default 'vendure-token'
+     */
+    channelTokenKey: string;
     /**
      * @description
      * The default language for the Admin UI. Must be one of the
@@ -316,7 +321,7 @@ export interface AdminUiConfig {
      * @description
      * Allows you to provide default reasons for a refund or cancellation. This will be used in the
      * refund/cancel dialog. The values can be literal strings (e.g. "Not in stock") or translation
-     * tokens (see [Adding Admin UI Translations](/docs/plugins/extending-the-admin-ui/adding-ui-translations/)).
+     * tokens (see [Adding Admin UI Translations](/guides/extending-the-admin-ui/adding-ui-translations/)).
      *
      * @since 1.5.0
      * @default ['order.cancel-reason-customer-request', 'order.cancel-reason-not-available']
@@ -328,7 +333,7 @@ export interface AdminUiConfig {
  * @description
  * Configures the path to a custom-build of the Admin UI app.
  *
- * @docsCategory core plugins/AdminUiPlugin
+ * @docsCategory common/AdminUi
  */
 export interface AdminUiAppConfig {
     /**
@@ -356,7 +361,7 @@ export interface AdminUiAppConfig {
  * @description
  * Information about the Admin UI app dev server.
  *
- * @docsCategory core plugins/AdminUiPlugin
+ * @docsCategory common/AdminUi
  */
 export interface AdminUiAppDevModeConfig {
     /**
